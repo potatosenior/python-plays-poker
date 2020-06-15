@@ -1,0 +1,7 @@
+salvar infos dos players da mesa
+blefar dependendo da diferença entre a quantidade de ficha
+fazer o potValue ficar sempre positivo abs(potValue)
+verificar quando começar intervalo
+verificar quando o flop aparecer
+tirar todos pontos (.) dos valores de aposta
+tirar caracteres dos valores das cartas
