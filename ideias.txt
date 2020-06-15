@@ -5,3 +5,4 @@ verificar quando começar intervalo
 verificar quando o flop aparecer
 tirar todos pontos (.) dos valores de aposta
 tirar caracteres dos valores das cartas
+validar os dados coletados

@@ -5,6 +5,7 @@ import numpy as np
 import win32gui
 import pytesseract
 from stackImages import stackImages
+from math import floor
 
 pytesseract.pytesseract.tesseract_cmd = r'D:\\0 - Progamas\\Tesseract\\tesseract.exe'
 # GetForegroundWindow() pega a tela ativa
@@ -26,6 +27,9 @@ class card:
 class stats:
   potValue = 0
   roundBetValue = 0
+  ante = 0
+  sb = 0
+  bb = 0
   flop = [card(), card(), card()]
   turn = card()
   river = card()
@@ -86,7 +90,8 @@ flopImage = {}
 flopCardsImage = [{}, {}, {}]
 turnCardImage = {}
 riverCardImage = {}
-debug = False
+debug = True
+hasAnte = True
 
 def callback(hwnd, extra):
   global window
@@ -229,7 +234,9 @@ def getTableStats(img):
 
   getPot(improvedImage)
   getTableBet(improvedImage)
-
+  getBlinds(improvedImage)
+  if hasAnte:
+    getAnte(improvedImage)
   """ w, h = 100, 30
   img1 = cv.resize(potImage,(w, h), fx=2, fy=2, interpolation=cv.INTER_CUBIC)
   img2 = cv.resize(tableBetImage,(w, h), fx=2, fy=2, interpolation=cv.INTER_CUBIC)
@@ -252,57 +259,57 @@ def getButtonPos(img):
   w = window.width
   h = window.height
 
-  y = int(window.height * 0.5) # quanto maior, mais pra baixo
-  x = int(window.width * 0.24) # quanto maior, mais pra direita
+  y = int(h * 0.5) # quanto maior, mais pra baixo
+  x = int(w * 0.24) # quanto maior, mais pra direita
   buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
 
   if isButton(buttonImg):
     return 1
 
-  y = int(window.height * 0.37) 
-  x = int(window.width * 0.18) 
+  y = int(h * 0.37) 
+  x = int(w * 0.18) 
   buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
 
   if isButton(buttonImg):
     return 2
 
-  y = int(window.height * 0.28) 
-  x = int(window.width * 0.29) 
+  y = int(h * 0.28) 
+  x = int(w * 0.29) 
   buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
 
   if isButton(buttonImg):
     return 3
   
-  y = int(window.height * 0.22) 
-  x = int(window.width * 0.4455) 
+  y = int(h * 0.22) 
+  x = int(w * 0.4455) 
   buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
 
   if isButton(buttonImg):
     return 4
   
-  y = int(window.height * 0.245) 
-  x = int(window.width * 0.64) 
+  y = int(h * 0.245) 
+  x = int(w * 0.64) 
   buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
 
   if isButton(buttonImg):
     return 5
 
-  y = int(window.height * 0.315) 
-  x = int(window.width * 0.743) 
+  y = int(h * 0.315) 
+  x = int(w * 0.743) 
   buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
 
   if isButton(buttonImg):
     return 6
   
-  y = int(window.height * 0.5) 
-  x = int(window.width * 0.774) 
+  y = int(h * 0.5) 
+  x = int(w * 0.774) 
   buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
 
   if isButton(buttonImg):
     return 7
   
-  y = int(window.height * 0.57) 
-  x = int(window.width * 0.66) 
+  y = int(h * 0.57) 
+  x = int(w * 0.66) 
   buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
 
   if isButton(buttonImg):
@@ -364,6 +371,44 @@ def getOpponents(img):
   if isOpponent(opContainer, 7):
     stats.qntd_opponents += 1
 
+def getAnte(img):
+  global window
+  global stats
+
+  w = window.width
+  h = window.height
+  y = int(h * 0.12) 
+  x = int(w * 0.97) 
+  anteImg = img[y:y + int(h*0.038), x:w]
+  ante = detectNumber(anteImg)
+
+def getBlinds(img):
+  global window
+  global stats
+
+  w = window.width
+  h = window.height
+
+  if not hasAnte:
+    y = int(h * 0.12) 
+    x = int(w * 0.953) 
+    blindsImg = img[y:y + int(h*0.038), x:w]
+    blinds = detectNumber(blindsImg)
+    #remove o numero 1 do meio dos blinds que no caso é uma '/' que o tesseract lê como 1; 16/32 -> 16132 -> 1632
+    small_blind = blinds[:floor(len(blinds)/2)]
+
+    stats.sb = small_blind
+    stats.bb = int(small_blind)*2
+  else:
+    y = int(h * 0.12) 
+    x = int(w * 0.9) 
+    blindsImg = img[y:y + int(h*0.038), x:x + int(w*0.07)]
+    blinds = detectNumber(blindsImg)
+    #remove o numero 1 do meio dos blinds que no caso é uma '/' que o tesseract lê como 1; 16/32 -> 16132 -> 1632
+    small_blind = blinds[:floor(len(blinds)/2)]
+    
+    stats.sb = small_blind
+    # stats.bb = int(small_blind)*2
 def isButton(img):
   img = cv.Canny(img, 50, 50)
   # pega as formas na imagem
@@ -428,10 +473,11 @@ def statusScreen(fps):
   'flop: ': stats.flop[0].value + ' ' + stats.flop[1].value + ' ' + stats.flop[2].value,
   'turn: ': stats.turn.value,
   'river: ': stats.river.value,
-  'Player chips: ': player.chips,
+  'Player chips: ': str(player.chips),
   'Player cards: ': player.cards[0].value + ' ' + player.cards[1].value,
-  'Button pos: ': stats.buttonPos,
-  'total opponents: ': stats.qntd_opponents
+  'Button pos: ': str(stats.buttonPos),
+  'total opponents: ': str(stats.qntd_opponents),
+  'small blind/big blind: ': str(stats.sb) + '/' + str(stats.bb)
   }
   padding = 25
   for key, value in stats_list.items():
@@ -476,7 +522,7 @@ with mss.mss() as sct:
       monitor = getMonitor()
       img = np.array(sct.grab(monitor))
     else:
-      img = cv.imread('btn1.png')
+      img = cv.imread('btn5.png')
       window.left = 0
       window.top = 0
       window.right = 955
