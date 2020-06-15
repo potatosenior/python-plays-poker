@@ -29,6 +29,8 @@ class stats:
   flop = [card(), card(), card()]
   turn = card()
   river = card()
+  buttonPos = None
+  qntd_opponents = 0
 
 class player:
   chips = 0
@@ -71,20 +73,27 @@ class player:
     """ cv.imshow("cards", cardsImg)
     cv.imshow("card1", card2) """
 
+class oponnent:
+  name = ''
+  chips = 0
+
 stats = stats()
 window = window()
+opponents = [oponnent(), oponnent(), oponnent(), oponnent(), oponnent(), oponnent(), oponnent(), oponnent()]
 potImage = {}
 tableBetImage = {}
 flopImage = {}
 flopCardsImage = [{}, {}, {}]
 turnCardImage = {}
 riverCardImage = {}
+debug = False
 
 def callback(hwnd, extra):
   global window
   window_name = win32gui.GetWindowText(hwnd)
 
-  if not ('No Limit Hold\'em' or 'No Limit Hold’em') in window_name:
+  # if not (('No Limit Hold\'em' ) in window_name or ('No Limit Hold’em') in window_name):
+  if not ('No Limit Hold' in window_name):
     return
   l, t, r, b = win32gui.GetWindowRect(hwnd)
   window.left = l
@@ -107,6 +116,12 @@ def empty(a):
 
 def detectCaractere(img):
   conf = r'--oem 1 --psm 10'
+  result = pytesseract.image_to_string(img, config=conf)
+
+  return result
+
+def detectInLineText(img):
+  conf = r'--oem 1 --psm 7'
   result = pytesseract.image_to_string(img, config=conf)
 
   return result
@@ -232,6 +247,158 @@ def getTableCards(img):
   # stack = get_one_image([flopCardsImage[0], flopCardsImage[1], flopCardsImage[2], turnCardImage, riverCardImage])
   # cv.imshow("Cards", stack)
 
+def getButtonPos(img):
+  global window
+  w = window.width
+  h = window.height
+
+  y = int(window.height * 0.5) # quanto maior, mais pra baixo
+  x = int(window.width * 0.24) # quanto maior, mais pra direita
+  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+
+  if isButton(buttonImg):
+    return 1
+
+  y = int(window.height * 0.37) 
+  x = int(window.width * 0.18) 
+  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+
+  if isButton(buttonImg):
+    return 2
+
+  y = int(window.height * 0.28) 
+  x = int(window.width * 0.29) 
+  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+
+  if isButton(buttonImg):
+    return 3
+  
+  y = int(window.height * 0.22) 
+  x = int(window.width * 0.4455) 
+  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+
+  if isButton(buttonImg):
+    return 4
+  
+  y = int(window.height * 0.245) 
+  x = int(window.width * 0.64) 
+  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+
+  if isButton(buttonImg):
+    return 5
+
+  y = int(window.height * 0.315) 
+  x = int(window.width * 0.743) 
+  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+
+  if isButton(buttonImg):
+    return 6
+  
+  y = int(window.height * 0.5) 
+  x = int(window.width * 0.774) 
+  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+
+  if isButton(buttonImg):
+    return 7
+  
+  y = int(window.height * 0.57) 
+  x = int(window.width * 0.66) 
+  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+
+  if isButton(buttonImg):
+    return 8
+
+  return -1
+
+def getOpponents(img):
+  global window
+  w = window.width
+  h = window.height
+  stats.qntd_opponents = 0
+
+  y = int(window.height * 0.615) # quanto maior, mais pra baixo
+  x = int(window.width * 0.12) # quanto maior, mais pra direita
+  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
+  if isOpponent(opContainer, 0):
+    stats.qntd_opponents += 1
+
+  y = int(window.height * 0.418) 
+  x = int(window.width * 0.02) 
+  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
+  if isOpponent(opContainer, 1):
+    stats.qntd_opponents += 1
+
+  y = int(window.height * 0.23) 
+  x = int(window.width * 0.06) 
+  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
+  if isOpponent(opContainer, 2):
+    stats.qntd_opponents += 1
+
+  y = int(window.height * 0.14) 
+  x = int(window.width * 0.246) 
+  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
+  if isOpponent(opContainer, 3):
+    stats.qntd_opponents += 1
+
+  y = int(window.height * 0.14) 
+  x = int(window.width * 0.633) 
+  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
+  if isOpponent(opContainer, 4):
+    stats.qntd_opponents += 1
+
+  y = int(window.height * 0.23) 
+  x = int(window.width * 0.815) 
+  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
+  if isOpponent(opContainer, 5):
+    stats.qntd_opponents += 1
+  
+  y = int(window.height * 0.418) 
+  x = int(window.width * 0.855) 
+  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
+  if isOpponent(opContainer, 6):
+    stats.qntd_opponents += 1
+  
+  y = int(window.height * 0.615) 
+  x = int(window.width * 0.76) 
+  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
+  if isOpponent(opContainer, 7):
+    stats.qntd_opponents += 1
+
+def isButton(img):
+  img = cv.Canny(img, 50, 50)
+  # pega as formas na imagem
+  countours, hierarchy = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+  if not countours:
+    return False
+
+  for cnt in countours:
+    # area da forma
+    area = cv.contourArea(cnt)
+
+    if area > 400:
+      # perimetro da forma
+      perimeter = cv.arcLength(cnt, True)
+      approx = cv.approxPolyDP(cnt, 0.02*perimeter, True)
+      # quantidade de pontas da forma; 3 == triangulo, 4 == retangulo/quadrado, etc...
+      objCorners = len(approx)
+      if objCorners > 4: 
+        return True 
+      else: 
+        return False
+
+def isOpponent(img, idx):
+  h = img.shape[0]
+  name = img[0: int(h/2), :]
+  name = detectInLineText(name)
+  if(len(name) > 0):
+    chips = img[int(h/2):, :]
+    chips = detectNumber(chips)
+    opponents[idx].name = name
+    opponents[idx].chips = chips
+    return True
+  
+  return False
+
 def improveImage(image, invert=True):
   # source: https://stackoverflow.com/questions/54497882/how-improve-image-quality-to-extract-text-from-image-using-tesseract
   # create grayscale
@@ -262,7 +429,9 @@ def statusScreen(fps):
   'turn: ': stats.turn.value,
   'river: ': stats.river.value,
   'Player chips: ': player.chips,
-  'Player cards: ': player.cards[0].value + ' ' + player.cards[1].value
+  'Player cards: ': player.cards[0].value + ' ' + player.cards[1].value,
+  'Button pos: ': stats.buttonPos,
+  'total opponents: ': stats.qntd_opponents
   }
   padding = 25
   for key, value in stats_list.items():
@@ -298,59 +467,38 @@ def get_one_image(images): # junta as img, ta dando erro pq potImage so é 2D
 
   return final_image
   
-
 # https://python-mss.readthedocs.io/examples.html
 with mss.mss() as sct: 
+  cont = 5
   while "Screen capturing":
     last_time = time.time()
-    # monitor = getMonitor()
-    # img = np.array(sct.grab(monitor))
-    img = cv.imread('tableWaiting.png')
+    if not debug:
+      monitor = getMonitor()
+      img = np.array(sct.grab(monitor))
+    else:
+      img = cv.imread('btn1.png')
+      window.left = 0
+      window.top = 0
+      window.right = 955
+      window.bottom = 689
+      window.width = 955
+      window.height = 689
 
-    window.left = 0
-    window.top = 0
-    window.right = 955
-    window.bottom = 689
-    window.width = 955
-    window.height = 689
+    improvedImage = improveImage(img)
     getTableStats(img)
     getTableCards(img)
-    player.getPlayerStats(improveImage(img), player)
+    if cont == 5:
+      getOpponents(improvedImage)
+      cont = 0
+    stats.buttonPos = getButtonPos(improvedImage)
+    player.getPlayerStats(improvedImage, player)
     player.getPlayerCards(improveImage(img, False), player)
     statusScreen("FPS: {: .2f}".format(1 / (time.time() - last_time)))
-  
-    cv.imshow("Screen", img)
 
+    # cv.namedWindow("Screen", cv.WINDOW_NORMAL)
+    # cv.imshow("Screen", img)
+    cont += 1
     # Press "q" to quit
     if cv.waitKey(25) & 0xFF == ord("q"):
       cv.destroyAllWindows()
       break
-
-  """ cv.namedWindow('TrackBar')
-  cv.resizeWindow('TrackBar', 640, 250)
-  cv.createTrackbar('Hue min', 'TrackBar', 0, 179, empty) # 0 179 0 255 165 255
-  cv.createTrackbar('Hue max', 'TrackBar', 179, 179, empty) 
-  cv.createTrackbar('Sat min', 'TrackBar', 0, 255, empty)
-  cv.createTrackbar('Sat max', 'TrackBar', 255, 255, empty)
-  cv.createTrackbar('Val min', 'TrackBar', 165, 255, empty)
-  cv.createTrackbar('Val max', 'TrackBar', 255, 255, empty) """
-
-""" potHSV = cv.cvtColor(pot, cv.COLOR_BGR2HSV)
-lower = np.array([0, 0, 150]) # 0 179 0 131 150 255
-upper = np.array([179, 131, 255])
-mask = cv.inRange(potHSV, lower, upper)
-imgResult = cv.bitwise_and(pot, pot, mask=mask)
-imgResult = cv.cvtColor(imgResult, cv.COLOR_BGRA2GRAY) """
-
-""" imgHSV = cv.cvtColor(pot, cv.COLOR_BGR2HSV)
-h_min = cv.getTrackbarPos('Hue min', 'TrackBar')
-h_max = cv.getTrackbarPos('Hue max', 'TrackBar')
-s_min = cv.getTrackbarPos('Sat min', 'TrackBar')
-s_max = cv.getTrackbarPos('Sat max', 'TrackBar')
-v_min = cv.getTrackbarPos('Val min', 'TrackBar')
-v_max = cv.getTrackbarPos('Val max', 'TrackBar')
-lower = np.array([h_min, s_min, v_min])
-upper = np.array([h_max, s_max, v_max])
-mask = cv.inRange(imgHSV, lower, upper)
-imgResult = cv.bitwise_and(pot, pot, mask=mask),
-cv.imshow('Mask', mask) """
