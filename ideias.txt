@@ -6,3 +6,9 @@ verificar quando o flop aparecer
 tirar todos pontos (.) dos valores de aposta
 tirar caracteres dos valores das cartas
 validar os dados coletados
+fazer verificações em cada funçao pra nao precisar iterar tudo toda vez, ex: se a 1° carta nao for valida/n tiver, n precisar checar as outras
+
+spades == 5 area==5 << canny | == 4 area==506 << normal
+hearts == 9 area==108 << canny | == 9 area==506 << normal
+diamonds == 10 area==91 << canny | == 5 area==345 << normal
+clubs == 11 area==79 << canny | == 4 area==506 << normal

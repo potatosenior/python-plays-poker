@@ -7,7 +7,7 @@ import pytesseract
 from stackImages import stackImages
 from math import floor
 
-pytesseract.pytesseract.tesseract_cmd = r'D:\\0 - Progamas\\Tesseract\\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r'D:\0 - Progamas\Tesseract\tesseract.exe'
 # GetForegroundWindow() pega a tela ativa
 # mostra o titulo da tela GetWindowText
 # mostra o tamanho da tela GetWindowRect
@@ -22,22 +22,22 @@ class window:
 
 class card:
   value = ''
-  suit = '' # naipe
+  suit = None # naipe
 
 class stats:
-  potValue = 0
-  roundBetValue = 0
-  ante = 0
-  sb = 0
-  bb = 0
+  potValue = None
+  roundBetValue = None
+  ante = None
+  sb = None
+  bb = None
   flop = [card(), card(), card()]
   turn = card()
   river = card()
   buttonPos = None
-  qntd_opponents = 0
+  qntd_opponents = None
 
 class player:
-  chips = 0
+  chips = None
   cards = [card(), card()]
 
   def __init__(self):
@@ -79,19 +79,18 @@ class player:
 
 class oponnent:
   name = ''
-  chips = 0
+  chips = None
 
 stats = stats()
 window = window()
 opponents = [oponnent(), oponnent(), oponnent(), oponnent(), oponnent(), oponnent(), oponnent(), oponnent()]
 potImage = {}
 tableBetImage = {}
-flopImage = {}
 flopCardsImage = [{}, {}, {}]
 turnCardImage = {}
 riverCardImage = {}
-debug = True
-hasAnte = True
+debug = False
+hasAnte = False
 
 def callback(hwnd, extra):
   global window
@@ -119,20 +118,20 @@ def getMonitor():
 def empty(a):
   pass
 
-def detectCaractere(img):
-  conf = r'--oem 1 --psm 10'
-  result = pytesseract.image_to_string(img, config=conf)
-
-  return result
+def detectCaractere(img, shown=False):
+  if shown:
+    cv.imshow('detectCaractere', img)
+  conf = r'--oem 2 --psm 10'
+  return pytesseract.image_to_string(img, config=conf)
 
 def detectInLineText(img):
-  conf = r'--oem 1 --psm 7'
+  conf = r'--oem 2 --psm 7'
   result = pytesseract.image_to_string(img, config=conf)
 
   return result
 
 def detectNumber(img):
-  conf = r'--oem 1 --psm 7 outputbase digits'
+  conf = r'--oem 2 --psm 7 outputbase digits'
   result = pytesseract.image_to_string(img, config=conf)
 
   return result
@@ -168,64 +167,109 @@ def getTableBet(img):
   
   # cv.imshow("TableBet", tableBetImage)
 
-def getFlop(img):
+def getFlop(img, shown=False):
   global window
   global stats
-  global flopImage
-  global flopCardsImage
 
   y = int(window.height * 0.355) # quanto maior, mais pra baixo
-  x = int(window.width * 0.34) # quanto maior, mais pra direita
-  # [altura, largura]
-  flopImage = img[y:y + 47, x:x + int(x*0.54)]
-
+  x = int(window.width * 0.338) # quanto maior, mais pra direita
+       
+  flopImage = img[y:y + int(y*0.22), x:x + int(x*0.55)] #[altura, largura]
   h, w = flopImage.shape
-  #                         [altura, largura]
-  flopCardImage1 = flopImage[:, int(w/3/2 - 10):int(w/3)]
-  flopCardImage2 = flopImage[:, int(w/2.1):int(w/3*2)]
-  flopCardImage3 = flopImage[:, int(w/1.23):int(w)]
 
-  """ flopCardImage1 = improveImage(flopCardImage1, False)
-  flopCardImage2 = improveImage(flopCardImage2, False) 
-  flopCardImage3 = improveImage(flopCardImage3, False)  """
-  flopCardsImage[0] = flopCardImage1
-  flopCardsImage[1] = flopCardImage2
-  flopCardsImage[2] = flopCardImage3
+  if shown:
+    cv.imshow('flop', flopImage)
 
-  stats.flop[0].value = detectCaractere(flopCardImage1)
-  stats.flop[1].value = detectCaractere(flopCardImage2)
-  stats.flop[2].value = detectCaractere(flopCardImage3)
-  #cv.imshow("Flop", flopImage)
+  card_image = flopImage[:, int(w/3/2 - 10):int(w/3)]
+  card_value = detectCaractere(card_image, False)
+  if isCardValid(card_value): # check if has a card
+    card_suit = checkSuit(flopImage[int(h/2):, :int(w/3/2) - 5])
+    if isSuitValid(card_suit):
+      stats.flop[0].value = card_value
+      stats.flop[0].suit = card_suit
+    else:
+      return -1
+  else:
+    return -1
 
-def getTurn(img):
+  card_image = flopImage[:, int(w/2.1):int(w/3*2)]
+  card_value = detectCaractere(card_image)
+  if isCardValid(card_value): # check if has a card
+    card_suit = checkSuit(flopImage[int(h/2):, int(w/3 + w*0.03):int(w/3*2/1.43)])
+    if isSuitValid(card_suit):
+      stats.flop[1].value = card_value
+      stats.flop[1].suit = card_suit
+    else:
+      return -1
+  else:
+    return -1
+
+  card_image = flopImage[:, int(w/3*2.5):int(w)]
+  card_value = detectCaractere(card_image)
+  if isCardValid(card_value): # check if has a card
+    card_suit = checkSuit(flopImage[int(h/2):, int(w/3*2 + (w*0.05)):int(w - w/3/2 + 5)])
+    if isSuitValid(card_suit): # check suit is valid:
+      stats.flop[2].value = card_value
+      stats.flop[2].suit = card_suit
+    else:
+      return -1
+  else:
+    return -1
+  
+  return 1
+
+def getTurn(img, shown=False):
   global window
   global stats
-  global turnCardImage
 
-  y = int(window.height * 0.355) # quanto maior, mais pra baixo
-  x = int(window.width * 0.56) # quanto maior, mais pra direita
-               # [altura, largura]
-  turnCardImage = img[y:y + 47, x:x + int(x*0.055)]
-  # turnCardImage = improveImage(turnCardImage, False) 
+  y = int(window.height * 0.36) # quanto maior, mais pra baixo
+  x = int(window.width * 0.537) # quanto maior, mais pra direita
 
-  stats.turn.value = detectCaractere(turnCardImage)
+  card_image = img[y:y + int(y*0.34), x:x + int(x*0.115)] # [altura, largura]
+  h, w = card_image.shape
 
-  #cv.imshow("Turn", turnImage)
+  if shown:
+    cv.imshow("Turn", card_image)
 
-def getRiver(img):
+  card_image_value = card_image[:int(h/1.8), int(w/2 - w*0.1):]
+  card_value = detectCaractere(card_image_value, False)
+
+  if isCardValid(card_value): # check if has a card
+    card_suit = checkSuit(card_image[int(h/2/2):int(h/2), :int(w/2.5)], False)
+    if isSuitValid(card_suit): # check suit is valid:
+      stats.turn.value = card_value
+      stats.turn.suit = card_suit
+    else:
+      return -1
+  else:
+    return -1
+
+def getRiver(img, shown=False):
   global window
   global stats
   global riverCardImage
 
   y = int(window.height * 0.355) # quanto maior, mais pra baixo
-  x = int(window.width * 0.625) # quanto maior, mais pra direita
+  x = int(window.width * 0.605) # quanto maior, mais pra direita
                # [altura, largura]
-  riverCardImage = img[y:y + 47, x:x + int(x*0.055)]
-  # riverCardImage = improveImage(riverCardImage, False) 
+  card_image = img[y:y + int(y*0.34), x:x + int(x*0.1)] # [altura, largura]
+  h, w = card_image.shape
 
-  stats.river.value = detectCaractere(riverCardImage)
+  if shown:
+    cv.imshow("Turn", card_image)
 
-  #cv.imshow("River", riverCardImage)
+  card_image_value = card_image[:int(h/1.6), int(w/2 - w*0.1):]
+  card_value = detectCaractere(card_image_value, False)
+
+  if isCardValid(card_value): # check if has a card
+    card_suit = checkSuit(card_image[int(h/2/1.6):int(h/1.8), :int(w/2.5)], False)
+    if isSuitValid(card_suit): # check suit is valid:
+      stats.river.value = card_value
+      stats.river.suit = card_suit
+    else:
+      return -1
+  else:
+    return -1
 
 def getTableStats(img):
   global tableBetImage, potImage
@@ -247,9 +291,9 @@ def getTableStats(img):
 
 def getTableCards(img):
   improvedImage = improveImage(img, False)
-  getFlop(improvedImage)
-  getTurn(improvedImage)
-  getRiver(improvedImage)
+  getFlop(improvedImage, False)
+  getTurn(improvedImage, False)
+  getRiver(improvedImage, False)
 
   # stack = get_one_image([flopCardsImage[0], flopCardsImage[1], flopCardsImage[2], turnCardImage, riverCardImage])
   # cv.imshow("Cards", stack)
@@ -409,6 +453,50 @@ def getBlinds(img):
     
     stats.sb = small_blind
     # stats.bb = int(small_blind)*2
+
+def checkSuit(img, shown=False):
+  img = cv.Canny(img, 50, 50)
+  if shown:
+    cv.imshow('suit', img)
+  # pega as formas na imagem
+  countours, hierarchy = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+  if not countours:
+    return False
+
+  for cnt in countours:
+    # area da forma
+    area = cv.contourArea(cnt)
+
+    # perimetro da forma
+    perimeter = cv.arcLength(cnt, True)
+    approx = cv.approxPolyDP(cnt, 0.02*perimeter, True)
+    # quantidade de pontas da forma; 3 == triangulo, 4 == retangulo/quadrado, etc...
+    objCorners = len(approx)
+    if shown:
+      print('Area: {}, Corners: {}'.format(area, objCorners))
+    if objCorners == 5:
+      return 'spades' # spades
+    elif objCorners == 9:
+      return 'hearts' # hearts
+    elif objCorners == 10:
+      return 'diamonds' # diamonds
+    elif objCorners == 11:
+      return 'clubs' # clubs
+    else:
+      return -1 # unknown
+
+def isCardValid(card):
+  if card:
+    return True
+  else:
+    return False
+
+def isSuitValid(suit):
+  if suit:
+    return True
+  else:
+    return False
+
 def isButton(img):
   img = cv.Canny(img, 50, 50)
   # pega as formas na imagem
@@ -470,9 +558,9 @@ def statusScreen(fps):
   stats_list = {'    STATUS EM TEMPO REAL    ': str(fps), '':'', 
   'potValue: ': stats.potValue,
   'roundBetValue: ': stats.roundBetValue,
-  'flop: ': stats.flop[0].value + ' ' + stats.flop[1].value + ' ' + stats.flop[2].value,
-  'turn: ': stats.turn.value,
-  'river: ': stats.river.value,
+  'flop: ': stats.flop[0].value + '['+str(stats.flop[0].suit)+'] ' + str(stats.flop[1].value) + '['+str(stats.flop[1].suit)+'] ' + str(stats.flop[2].value) + '['+str(stats.flop[2].suit)+'] ',
+  'turn: ': stats.turn.value + '['+str(stats.turn.suit)+'] ',
+  'river: ': stats.river.value + '['+str(stats.river.suit)+'] ',
   'Player chips: ': str(player.chips),
   'Player cards: ': player.cards[0].value + ' ' + player.cards[1].value,
   'Button pos: ': str(stats.buttonPos),
@@ -522,7 +610,7 @@ with mss.mss() as sct:
       monitor = getMonitor()
       img = np.array(sct.grab(monitor))
     else:
-      img = cv.imread('btn5.png')
+      img = cv.imread('5cards.png')
       window.left = 0
       window.top = 0
       window.right = 955
@@ -531,14 +619,14 @@ with mss.mss() as sct:
       window.height = 689
 
     improvedImage = improveImage(img)
-    getTableStats(img)
+    #getTableStats(img)
     getTableCards(img)
-    if cont == 5:
+    """ if cont == 5:
       getOpponents(improvedImage)
       cont = 0
     stats.buttonPos = getButtonPos(improvedImage)
     player.getPlayerStats(improvedImage, player)
-    player.getPlayerCards(improveImage(img, False), player)
+    player.getPlayerCards(improveImage(img, False), player) """
     statusScreen("FPS: {: .2f}".format(1 / (time.time() - last_time)))
 
     # cv.namedWindow("Screen", cv.WINDOW_NORMAL)
