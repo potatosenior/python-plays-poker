@@ -12,3 +12,21 @@ spades == 5 area==5 << canny | == 4 area==506 << normal
 hearts == 9 area==108 << canny | == 9 area==506 << normal
 diamonds == 10 area==91 << canny | == 5 area==345 << normal
 clubs == 11 area==79 << canny | == 4 area==506 << normal
+
+red = hearts
+  [ 68  68 153] +289 *707.472
+  [ 64  64 145] 281
+green = club
+  [ 69 152 102] 323 *1.069.776
+  [ 71 155 104] 330
+blue = diamonds
+  [139 124  71] 334 
+  [143 126  72] 338
+back = spades
+  [99 99 99]    297
+  [101 101 101] 303
+
+descobrir a carta de acordo com a cor
+
+G parece um Q
+9 parece um g

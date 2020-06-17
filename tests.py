@@ -1,30 +1,37 @@
+from tkinter import *
+import random
 import time
 
-import cv2
-import mss
-import numpy
+root = Tk()
+root.title = "Game"
+root.resizable(0,0)
+root.wm_attributes("-topmost", 1)
+
+canvas = Canvas(root, width=500, height=400, bd=0, highlightthickness=0)
+canvas.pack()
+
+class Ball:
+    def __init__(self, canvas, color):
+        self.canvas = canvas
+        self.id = canvas.create_oval(10, 10, 25, 25, fill=color)
+        self.canvas.move(self.id, 245, 100)
+
+        self.canvas.bind("<Button-1>", self.canvas_onclick)
+        self.text_id = self.canvas.create_text(300, 200, anchor='se')
+        self.canvas.itemconfig(self.text_id, text='hello')
+
+    def canvas_onclick(self, event):
+        self.canvas.itemconfig(
+            self.text_id, 
+            text="You clicked at ({}, {})".format(event.x, event.y)
+        )
+
+    def draw(self):
+        self.canvas.move(self.id, 0, -1)
+        self.canvas.after(50, self.draw)
 
 
-with mss.mss() as sct:
-    # Part of the screen to capture
-    monitor = {"top": 40, "left": 0, "width": 800, "height": 640}
 
-    while "Screen capturing":
-        last_time = time.time()
 
-        # Get raw pixels from the screen, save it to a Numpy array
-        img = numpy.array(sct.grab(monitor))
-
-        # Display the picture
-        cv2.imshow("OpenCV/Numpy normal", img)
-
-        # Display the picture in grayscale
-        # cv2.imshow('OpenCV/Numpy grayscale',
-        #            cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY))
-
-        print("fps: {: .0f}".format(1 / (time.time() - last_time)))
-
-        # Press "q" to quit
-        if cv2.waitKey(25) & 0xFF == ord("q"):
-            cv2.destroyAllWindows()
-            break
+ball = Ball(canvas, "red")
+ball.draw()  #Changed per Bryan Oakley's comment.
