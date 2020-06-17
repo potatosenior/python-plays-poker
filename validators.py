@@ -4,9 +4,9 @@ def validate_card_value(card, shown=False):
   values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
   others = ['g', 'G']
   othersValue = ['9', 'Q']
-  
+
   #removes all other caracteres
-  result = re.sub("[^0-9^AJQK]", "", card)
+  result = re.sub("[^0-9^AJQKGg]", "", card)
   if shown:
     print('og: ', card, 'filtred: ', result)
 
@@ -19,5 +19,10 @@ def validate_card_value(card, shown=False):
 
 def validate_numbers_value(numbers):
   result = re.sub("[^0-9]", "", numbers)
+  
+  return result
+
+def validate_name(numbers):
+  result = re.sub("[^A-Z^a-z^0-9]", "", numbers)
   
   return result

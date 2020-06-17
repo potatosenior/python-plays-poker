@@ -6,7 +6,8 @@ import win32gui
 import pytesseract
 from stackImages import stackImages
 from math import floor
-from validators import validate_card_value, validate_numbers_value
+from validators import *
+from classes import *
 
 pytesseract.pytesseract.tesseract_cmd = r'D:\0 - Progamas\Tesseract\tesseract.exe'
 # GetForegroundWindow() pega a tela ativa
@@ -20,10 +21,6 @@ class window:
   bottom = 0
   width = 0
   height = 0
-
-class card:
-  value = None
-  suit = None # naipe
 
 class stats:
   potValue = None
@@ -44,49 +41,10 @@ class player:
   def __init__(self):
     self.chips = 0
     self.cards = [card(), card()]
-  
-  def getPlayerStats(img, self):
-    global window
-
-    y = int(window.height * 0.737) # quanto maior, mais pra baixo
-    x = int(window.width * 0.415) # quanto maior, mais pra direita
-
-    # [altura, largura]
-    chipsImage = img[y:y + 26, x:x + 110]
-
-    self.chips = detect_number(chipsImage)
-    
-    # cv.imshow("Chips", chipsImage)
-  
-  def getPlayerCards(img, self):
-    global window
-
-    y = int(window.height * 0.62) # quanto maior, mais pra baixo
-    x = int(window.width * 0.44) # quanto maior, mais pra direita
-
-    # [altura, largura]
-    cardsImg = img[y:y + 50, x:x + 120]
-
-    h, w = cardsImg.shape
-    #               [altura, largura]
-    card1 = cardsImg[:, int(w/2/2 - 10):int(w/2)]
-    card2 = cardsImg[:, int(w/2 + w/2/2 - 10):]
-
-    self.cards[0].value = detect_caractere(card1)
-    self.cards[1].value = detect_caractere(card2)
-    
-    """ cv.imshow("cards", cardsImg)
-    cv.imshow("card1", card2) """
-
-class oponnent:
-  name = ''
-  chips = None
 
 stats = stats()
 window = window()
 opponents = [oponnent(), oponnent(), oponnent(), oponnent(), oponnent(), oponnent(), oponnent(), oponnent()]
-potImage = {}
-tableBetImage = {}
 debug = False
 hasAnte = False
 
@@ -137,7 +95,6 @@ def detect_number(img):
 def get_pot(img):
   global window
   global stats
-  global potImage
 
   y = int(window.height * 0.313) # quanto maior, mais pra baixo
   x = int(window.width * 0.47) # quanto maior, mais pra direita
@@ -153,14 +110,44 @@ def get_pot(img):
     except:
       # cannot read pot value
       stats.potValue = None
-      return -1
+      return None
     else:
       stats.potValue = int(potValue)
+      return int(potValue)
+
+def get_player_chips(img, self):
+  global window
+
+  y = int(window.height * 0.737) # quanto maior, mais pra baixo
+  x = int(window.width * 0.415) # quanto maior, mais pra direita
+
+  # [altura, largura]
+  chipsImage = img[y:y + 26, x:x + 110]
+
+  self.chips = detect_number(chipsImage)
+
+def get_player_cards(img, self):
+  global window
+
+  y = int(window.height * 0.62) # quanto maior, mais pra baixo
+  x = int(window.width * 0.44) # quanto maior, mais pra direita
+
+  # [altura, largura]
+  cardsImg = img[y:y + 50, x:x + 120]
+
+  h, w = cardsImg.shape
+  #               [altura, largura]
+  card1 = cardsImg[:, int(w/2/2 - 10):int(w/2)]
+  card2 = cardsImg[:, int(w/2 + w/2/2 - 10):]
+
+  cards = [card(), card()]
+
+  get_card(card1, cards[0])
+  get_card(card2, cards[1])
 
 def get_table_bet(img):
   global window
   global stats
-  global tableBetImage
 
   y = int(window.height * 0.507) # quanto maior, mais pra baixo
   x = int(window.width * 0.46) # quanto maior, mais pra direita
@@ -176,9 +163,10 @@ def get_table_bet(img):
   except:
     # cannot read table bet value
     stats.roundBetValue = None
-    return -1
+    return None
   else:
     stats.roundBetValue = int(roundBetValue)
+    return int(roundBetValue)
 
 def get_card(img, var, shown=False):
   card_suit = get_card_suit(img, shown)
@@ -191,9 +179,9 @@ def get_card(img, var, shown=False):
       var.value = card_value
       var.suit = card_suit
     else:
-      return -1
+      return card()
   else:
-    return -1
+    return card()
   
   return 1
 
@@ -205,35 +193,35 @@ def get_table_cards(img, shown=False):
 
   cards_image = img[y:y + int(y*0.345), x:x + int(x*0.986), :] #[altura, largura]
   h, w = cards_image.shape[:2]
-
   # space between cards
   space = int(w*0.015)
   space2 = int(w*0.01) 
+  cards = [card(), card(), card(), card(), card()]
 
   if shown:
     cv.imshow('flop', cards_image)
   
   card_image = cards_image[:int(h/2), :int(w/5/2 + space), :]
-  if not get_card(card_image, stats.flop[0], False):
-    return -1
+  if not get_card(card_image, cards[0], False):
+    cards[0] = card()
   
   card_image = cards_image[:int(h/2), int(w/5 + space2):int(w/5*1.5 + space), :]
-  if not get_card(card_image, stats.flop[1], False):
-    return -1
+  if not get_card(card_image, cards[1], False):
+    cards[1] = card()
   
   card_image = cards_image[:int(h/2), int(w/5*2 + space2):int(w/5*2.5 + space), :]
-  if not get_card(card_image, stats.flop[2], False):
-    return -1
+  if not get_card(card_image, cards[2], False):
+    cards[2] = card()
 
   card_image = cards_image[:int(h/2), int(w/5*3 + space2):int(w/5*3.5 + space), :]
-  if not get_card(card_image, stats.turn, False):
-    return -1
+  if not get_card(card_image, cards[3], False):
+    cards[3] = card()
 
   card_image = cards_image[:int(h/2), int(w/5*4 + space2):int(w/5*4.5 + space), :]
-  if not get_card(card_image, stats.river, False):
-    return -1
+  if not get_card(card_image, cards[4], False):
+    cards[4] = card()
 
-  return 1
+  return cards
 
 def get_pixel(img, shown=False):
   # img format BGR
@@ -271,13 +259,14 @@ def get_card_suit(img, shown=False):
     return -1
 
 def get_table_stats(img):
-  global tableBetImage, potImage
+  pot = get_pot(img)
+  tableBet = get_table_bet(img)
+  sb, bb = get_blinds(img)
 
-  get_pot(img)
-  get_table_bet(img)
-  get_blinds(img)
   if hasAnte:
-    get_ante(img)
+    ante = get_ante(img)
+  else:
+    ante = None
 
 def get_button_pos(img):
   global window
@@ -340,61 +329,63 @@ def get_button_pos(img):
   if is_button(buttonImg):
     return 8
 
-  return -1
+  return None
 
 def get_opponents(img):
   global window
   w = window.width
   h = window.height
-  stats.qntd_opponents = 0
+  qntd_opponents = 0
 
   y = int(window.height * 0.615) # quanto maior, mais pra baixo
   x = int(window.width * 0.12) # quanto maior, mais pra direita
   opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
   if is_opponent(opContainer, 0):
-    stats.qntd_opponents += 1
+    qntd_opponents += 1
 
   y = int(window.height * 0.418) 
   x = int(window.width * 0.02) 
   opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
   if is_opponent(opContainer, 1):
-    stats.qntd_opponents += 1
+    qntd_opponents += 1
 
   y = int(window.height * 0.23) 
   x = int(window.width * 0.06) 
   opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
   if is_opponent(opContainer, 2):
-    stats.qntd_opponents += 1
+    qntd_opponents += 1
 
   y = int(window.height * 0.14) 
   x = int(window.width * 0.246) 
   opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
   if is_opponent(opContainer, 3):
-    stats.qntd_opponents += 1
+    qntd_opponents += 1
 
   y = int(window.height * 0.14) 
   x = int(window.width * 0.633) 
   opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
   if is_opponent(opContainer, 4):
-    stats.qntd_opponents += 1
+    qntd_opponents += 1
 
   y = int(window.height * 0.23) 
   x = int(window.width * 0.815) 
   opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
   if is_opponent(opContainer, 5):
-    stats.qntd_opponents += 1
+    qntd_opponents += 1
   
   y = int(window.height * 0.418) 
   x = int(window.width * 0.855) 
   opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
   if is_opponent(opContainer, 6):
-    stats.qntd_opponents += 1
+    qntd_opponents += 1
   
   y = int(window.height * 0.615) 
   x = int(window.width * 0.76) 
   opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
   if is_opponent(opContainer, 7):
-    stats.qntd_opponents += 1
+    qntd_opponents += 1
+
+  return qntd_opponents
 
 def get_ante(img):
   global window
@@ -412,10 +403,10 @@ def get_ante(img):
   except:
     # cannot read table bet value
     stats.ante = None
-    return -1
+    return None
   else:
-    stats.ante = ante
-    return 1
+    stats.ante = int(ante)
+    return int(ante)
 
 def get_blinds(img):
   global window
@@ -442,11 +433,11 @@ def get_blinds(img):
     # cannot read table bet value
     stats.sb = None
     stats.bb = None
-    return -1
+    return None, None
   else:
-    stats.sb = small_blind
+    stats.sb = int(small_blind)
     stats.bb = int(small_blind)*2
-    return 1
+    return int(small_blind), int(small_blind)*2
 
 def is_button(img):
   img = cv.Canny(img, 50, 50)
@@ -474,6 +465,7 @@ def is_opponent(img, idx):
   h = img.shape[0]
   name = img[0: int(h/2), :]
   name = detect_inline_text(name)
+
   if(len(name) > 0):
     chips = img[int(h/2):, :]
     chips = detect_number(chips)
@@ -552,7 +544,7 @@ def improve_card_image(img, suit, shown=False):
 
 def status_screen(fps):
   global stats
-  global potImage
+
   screen = np.zeros((512, 512, 3), np.uint8)
   stats_list = {'    STATUS EM TEMPO REAL    ': str(fps), '':'', 
   'potValue: ': str(stats.potValue),
@@ -600,39 +592,65 @@ def get_one_image(images): # junta as img, ta dando erro pq potImage so é 2D
 
   return final_image  
 # https://python-mss.readthedocs.io/examples.html
+def capture_screen():
+  with mss.mss() as sct:
+    if not debug:
+      monitor = get_monitor()
+      img = np.array(sct.grab(monitor))
+    else:
+      global window
+      img = cv.imread('./images/error7.png')
+      window.left = 0
+      window.top = 0
+      window.right = 955
+      window.bottom = 689
+      window.width = 955
+      window.height = 689
+  
+  return img
+
+def get_data(data):
+  last_time = time.time()
+  img = capture_screen()
+  improvedImage = improve_image(img)
+  
+  data.potSize = get_pot(improvedImage)
+  data.roundBetSize = get_table_bet(improvedImage)
+  data.ante = get_ante(improvedImage)
+  cards = get_table_cards(img)
+  data.flop = cards[:3]
+  data.turn = cards[3]
+  data.river = cards[4]
+  # data.playerChips = get_player_chips(improvedImage)
+  # data.playerCards = get_player_cards(improvedImage)
+  data.buttonPos = get_button_pos(improvedImage)
+  data.sb, data.bb = get_blinds(improvedImage)
+  data.opponents = get_opponents(improvedImage)
+  data.fps = "{: .2f}".format(1 / (time.time() - last_time))
+
 if __name__ == "__main__":
-  with mss.mss() as sct: 
-    cont = 5
-    while "Screen capturing":
-      last_time = time.time()
-      if not debug:
-        monitor = get_monitor()
-        img = np.array(sct.grab(monitor))
-      else:
-        img = cv.imread('./images/error7.png')
-        window.left = 0
-        window.top = 0
-        window.right = 955
-        window.bottom = 689
-        window.width = 955
-        window.height = 689
+  cont = 5
+  print('iniciando read_info')
+  while "Screen capturing":
+    last_time = time.time()
+    img = capture_screen()
 
-      improvedImage = improve_image(img)
+    improvedImage = improve_image(img)
 
-      get_table_stats(improvedImage)
-      # get_table_cards(img, False)
-      """ if cont == 5:
-        getOpponents(improvedImage)
-        cont = 0
-      stats.buttonPos = getButtonPos(improvedImage)
-      player.getPlayerStats(improvedImage, player)
-      player.getPlayerCards(improveImage(img, False), player) """
-      status_screen("FPS: {: .2f}".format(1 / (time.time() - last_time)))
+    get_table_stats(improvedImage)
+    # get_table_cards(img, False)
+    """ if cont == 5:
+      getOpponents(improvedImage)
+      cont = 0
+    stats.buttonPos = getButtonPos(improvedImage)
+    player.getPlayerStats(improvedImage, player)
+    player.getPlayerCards(improveImage(img, False), player) """
+    # status_screen("FPS: {: .2f}".format(1 / (time.time() - last_time)))
 
-      # cv.namedWindow("Screen", cv.WINDOW_NORMAL)
-      # cv.imshow("Screen", img)
-      cont += 1
-      # Press "q" to quit
-      if cv.waitKey(25) & 0xFF == ord("q"):
-        cv.destroyAllWindows()
-        break
+    # cv.namedWindow("Screen", cv.WINDOW_NORMAL)
+    # cv.imshow("Screen", img)
+    cont += 1
+    # Press "q" to quit
+    if cv.waitKey(25) & 0xFF == ord("q"):
+      cv.destroyAllWindows()
+      break
