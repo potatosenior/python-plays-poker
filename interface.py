@@ -4,8 +4,8 @@ class Interface:
   def __init__(self, master=None):
     bg = "#121212"
     bg2 = "#161616"
-    defaultFont = ("sans-serif", "15")
-    fontSmall = ("Arial", "10", "normal")
+    defaultFont = ("sans-serif", "18")
+    fontSmall = ("Arial", "14", "normal")
     defaultFontConfig = {'fg': "#FFF"}
     subFontConfig = {'fg': "red"}
     itemPadX = 2
@@ -37,10 +37,20 @@ class Interface:
     self.tableConfigTitle["font"] = defaultFont
     self.tableConfigTitle.grid(column=0, row=0, sticky=W, padx=itemPadX, pady=itemTitlePadY)
 
-    self.fps = Label(self.rootContainer, text="FPS:", bg=bg2)
-    self.fps.config(defaultFontConfig)
+    self.debug = Label(self.rootContainer, text="", bg=bg2)
+    self.debug.config(defaultFontConfig)
+    self.debug["font"] = defaultFont
+    self.debug.grid(column=1, row=1, sticky=(N), padx=itemPadX, pady=0)
+
+    self.fps = Label(self.debug, text="FPS:", bg=bg2)
+    self.fps.config(subFontConfig)
     self.fps["font"] = defaultFont
-    self.fps.grid(column=1, row=0, sticky=W, padx=itemPadX, pady=itemTitlePadY)
+    self.fps.grid(column=0, row=1, sticky=N, padx=itemPadX, pady=itemTitlePadY)
+
+    self.debugRound = Label(self.debug, text="", bg=bg, padx=padx, pady=pady, width=itemWidth)
+    self.debugRound.config(subFontConfig)
+    self.debugRound["font"] = fontSmall
+    self.debugRound.grid(column=0, row=2, sticky=W, padx=itemPadX, pady=itemPadY)
 
     self.tableConfigMaxPlayers = Label(self.StatsContainer, text="", bg=bg, padx=padx, pady=pady, width=itemWidth)
     self.tableConfigMaxPlayers.config(subFontConfig)
@@ -62,6 +72,11 @@ class Interface:
     self.tableStatsAnte["font"] = fontSmall
     self.tableStatsAnte.grid(column=2, row=1, sticky=W, padx=itemPadX, pady=itemPadY)
 
+    self.tableStatsButtonPos = Label(self.StatsContainer, text="", bg=bg, padx=padx, pady=pady, width=itemWidth)
+    self.tableStatsButtonPos.config(subFontConfig)
+    self.tableStatsButtonPos["font"] = fontSmall
+    self.tableStatsButtonPos.grid(column=3, row=1, sticky=W, padx=itemPadX, pady=itemPadY)
+
     self.roundStatsTitle = Label(self.StatsContainer, text="Round stats", bg=bg2)
     self.roundStatsTitle.config(defaultFontConfig)
     self.roundStatsTitle["font"] = defaultFont
@@ -82,17 +97,17 @@ class Interface:
     self.roundStatsOpponents["font"] = fontSmall
     self.roundStatsOpponents.grid(column=3, row=2, sticky=W, padx=itemPadX, pady=itemPadY)
 
-    self.roundStatsFlop = Label(self.StatsContainer, text="Flop: 10 ♥️ J ♦️ Q ♣", bg=bg, padx=padx, pady=pady, width=itemWidth)
+    self.roundStatsFlop = Label(self.StatsContainer, text="", bg=bg, padx=padx, pady=pady, width=itemWidth)
     self.roundStatsFlop.config(subFontConfig)
     self.roundStatsFlop["font"] = fontSmall
     self.roundStatsFlop.grid(column=1, row=3, sticky=W, padx=itemPadX, pady=itemPadY)
 
-    self.roundStatsTurn = Label(self.StatsContainer, text="Turn: K ♠️", bg=bg, padx=padx, pady=pady, width=itemWidth)
+    self.roundStatsTurn = Label(self.StatsContainer, text="", bg=bg, padx=padx, pady=pady, width=itemWidth)
     self.roundStatsTurn.config(subFontConfig)
     self.roundStatsTurn["font"] = fontSmall
     self.roundStatsTurn.grid(column=2, row=3, sticky=W, padx=itemPadX, pady=itemPadY)
 
-    self.roundStatsRiver = Label(self.StatsContainer, text="River: A ♠️", bg=bg, padx=padx, pady=pady, width=itemWidth)
+    self.roundStatsRiver = Label(self.StatsContainer, text="", bg=bg, padx=padx, pady=pady, width=itemWidth)
     self.roundStatsRiver.config(subFontConfig)
     self.roundStatsRiver["font"] = fontSmall
     self.roundStatsRiver.grid(column=3, row=3, sticky=W, padx=itemPadX, pady=itemPadY)
@@ -113,18 +128,30 @@ class Interface:
     self.tablePlayerStatsChips.grid(column=2, row=4, sticky=W, padx=itemPadX, pady=itemPadY)
 
   def setData(self, data):
+    suits = {'hearts': '♥️', 'diamonds': '♦️', 'clubs': '♣', 'spades': '♠️', '-1': '?', 'None': ''}
+
     self.tableConfigMaxPlayers["text"] = 'Max players: ' + str(data.maxPlayers)
     self.tableStatsBlinds["text"] = 'blinds: ' + str(data.sb) + '/' + str(data.bb)
     self.tableStatsAnte["text"] = 'Ante: ' + str(data.ante)
+    self.tableStatsButtonPos["text"] = 'Button pos: ' +  str(data.buttonPos)
     self.roundStatsPotSize["text"] = 'Pot size: ' + str(data.potSize)
     self.roundStatsBetsize["text"] = 'Round bet size: ' + str(data.roundBetSize)
-    self.roundStatsOpponents["text"] = 'Opponents: ' +  str(data.opponents)
-    self.roundStatsFlop["text"] = 'Flop: {} {} {}'.format(str(data.flop[0].value), str(data.flop[1].value), str(data.flop[2].value))
-    self.roundStatsTurn["text"] = 'Turn: ' + str(data.turn.value)
-    self.roundStatsRiver["text"] = 'River: ' + str(data.river.value)
-    self.tablePlayerStatsCards["text"] = 'Cards: ' + str(data.playerCards)
+    self.roundStatsOpponents["text"] = 'Opponents: ' +  str(data.qntdOpponents)
+    self.roundStatsFlop["text"] = 'Flop: {}{} {}{} {}{}'.format(
+      str(data.flop[0].value), suits[str(data.flop[0].suit)], 
+      str(data.flop[1].value), suits[str(data.flop[1].suit)], 
+      str(data.flop[2].value), suits[str(data.flop[2].suit)]
+    )
+    self.roundStatsTurn["text"] = 'Turn: {}{}'.format(str(data.turn.value), suits[str(data.turn.suit)])
+    self.roundStatsRiver["text"] = 'River: {}{}'.format(str(data.river.value), suits[str(data.river.suit)])
+    self.tablePlayerStatsCards["text"] = 'Cards: {}{} {}{}'.format(
+      str(data.playerCards[0].value), suits[str(data.playerCards[0].suit)],
+      str(data.playerCards[1].value), suits[str(data.playerCards[1].suit)]
+    )
     self.tablePlayerStatsChips["text"] = 'Chips: ' + str(data.playerChips)
+    # debug
     self.fps["text"] = 'FPS: ' + str(data.fps)
+    self.debugRound["text"] = 'round ' + str(data.round)
 
 if __name__ == "__main__":
   root = Tk()

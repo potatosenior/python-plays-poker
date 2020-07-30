@@ -14,61 +14,35 @@ pytesseract.pytesseract.tesseract_cmd = r'D:\0 - Progamas\Tesseract\tesseract.ex
 # mostra o titulo da tela GetWindowText
 # mostra o tamanho da tela GetWindowRect
 
-class window:
-  left = 0
-  top = 0
-  right = 0
-  bottom = 0
-  width = 0
-  height = 0
-
-class stats:
-  potValue = None
-  roundBetValue = None
-  ante = None
-  sb = None
-  bb = None
-  flop = [card(), card(), card()]
-  turn = card()
-  river = card()
-  buttonPos = None
-  qntd_opponents = None
-
-class player:
-  chips = None
-  cards = [card(), card()]
-
-  def __init__(self):
-    self.chips = 0
-    self.cards = [card(), card()]
-
-stats = stats()
-window = window()
-opponents = [oponnent(), oponnent(), oponnent(), oponnent(), oponnent(), oponnent(), oponnent(), oponnent()]
 debug = False
-hasAnte = False
+hasAnte = True
 
-def get_table_window(hwnd, extra):
-  global window
+def get_table_window(hwnd, monitor):
   window_name = win32gui.GetWindowText(hwnd)
 
   # if not (('No Limit Hold\'em' ) in window_name or ('No Limit Hold’em') in window_name):
-  if not ('No Limit Hold' in window_name):
+  if not ('Hold' in window_name):
     return
   l, t, r, b = win32gui.GetWindowRect(hwnd)
-  window.left = l
-  window.top = t
-  window.right = r
-  window.bottom = b
-  window.width = r - l
-  window.height = b - t
+  monitor["left"] = l
+  monitor["top"] = t
+  monitor["right"] = r
+  monitor["bottom"] = b
+  monitor["width"] = r - l
+  monitor["height"] = b - t
   # print("%s:" % window_name)
-  # print('window:', window)
+  # print('window:', window.left, window.top)
 
-def get_monitor():
+def get_monitor(data):
   # https://stackoverflow.com/questions/7142342/get-window-position-size-with-python
-  win32gui.EnumWindows(get_table_window, None)
-  monitor = {"top": window.top, "left": window.left, "width": window.width, "height": window.height}
+  monitor = {"top": 0, "left": 0, "width": 0, "height": 0}
+  win32gui.EnumWindows(get_table_window, monitor)
+  data.window.left = monitor["left"]
+  data.window.top = monitor["top"]
+  data.window.right = monitor["right"]
+  data.window.bottom = monitor["bottom"]
+  data.window.width = monitor["width"]
+  data.window.height = monitor["height"]
   return monitor
 
 def detect_caractere(img, shown=False, var=None):
@@ -86,21 +60,25 @@ def detect_inline_text(img):
 
   return result
 
-def detect_number(img):
+def detect_number(img, shown=False):
+  if shown:
+    cv.imshow('detect number: ', img)
+
   conf = r'--oem 2 --psm 7 outputbase digits'
   result = pytesseract.image_to_string(img, config=conf)
 
   return result
 
-def get_pot(img):
-  global window
-  global stats
-
-  y = int(window.height * 0.313) # quanto maior, mais pra baixo
-  x = int(window.width * 0.47) # quanto maior, mais pra direita
+def get_pot(img, data, shown=False):
+  y = int(data.window.height * 0.313) # quanto maior, mais pra baixo
+  x = int(data.window.width * 0.44) # quanto maior, mais pra direita
 
   # [altura, largura]
-  potImage = img[y:y + 26, x:x + 100]
+  potImage = img[y:y + int(y*0.13), x:x + int(x*0.3)]
+  
+  if shown:
+    cv.imshow('pot', potImage)
+
   potValue = detect_number(potImage)
   potValue = validate_numbers_value(potValue)
 
@@ -109,48 +87,46 @@ def get_pot(img):
       int(potValue)
     except:
       # cannot read pot value
-      stats.potValue = None
       return None
     else:
-      stats.potValue = int(potValue)
       return int(potValue)
 
-def get_player_chips(img, self):
-  global window
-
-  y = int(window.height * 0.737) # quanto maior, mais pra baixo
-  x = int(window.width * 0.415) # quanto maior, mais pra direita
-
-  # [altura, largura]
-  chipsImage = img[y:y + 26, x:x + 110]
-
-  self.chips = detect_number(chipsImage)
-
-def get_player_cards(img, self):
-  global window
-
-  y = int(window.height * 0.62) # quanto maior, mais pra baixo
-  x = int(window.width * 0.44) # quanto maior, mais pra direita
+def get_player_chips(img, data, shown=False):
+  y = int(data.window.height * 0.737) # quanto maior, mais pra baixo
+  x = int(data.window.width * 0.415) # quanto maior, mais pra direita
+  marginError = int(x*0.05)
 
   # [altura, largura]
-  cardsImg = img[y:y + 50, x:x + 120]
+  chipsImage = img[y:y + int(y*0.08), x:x + int(x*0.4)]
 
-  h, w = cardsImg.shape
-  #               [altura, largura]
-  card1 = cardsImg[:, int(w/2/2 - 10):int(w/2)]
-  card2 = cardsImg[:, int(w/2 + w/2/2 - 10):]
+  if shown:
+    cv.imshow('Player Chips Image', chipsImage)
 
+  return validate_numbers_value(detect_number(chipsImage))
+
+def get_player_cards(img, data, shown=False):
+  y = int(data.window.height * 0.64) # quanto maior, mais pra baixo
+  x = int(data.window.width * 0.438) # quanto maior, mais pra direita
+  marginError = int(x*0.02)
+  #             [altura, largura]
+  cardsImg = img[y:y + int(y*0.08), x:x + int(x*0.28)]
+  h, w = cardsImg.shape[:2]
+  
+  if shown:
+    cv.imshow('Player Cards', cardsImg)
+
+  card1 = cardsImg[:, :int(w/2/2) + marginError, :]
+  card2 = cardsImg[:, int(w/2):int(w/2 + w/2/2) + marginError, :]
   cards = [card(), card()]
 
-  get_card(card1, cards[0])
-  get_card(card2, cards[1])
+  get_card(card1, cards[0], False)
+  get_card(card2, cards[1], False)
 
-def get_table_bet(img):
-  global window
-  global stats
+  return cards
 
-  y = int(window.height * 0.507) # quanto maior, mais pra baixo
-  x = int(window.width * 0.46) # quanto maior, mais pra direita
+def get_table_bet(img, data):
+  y = int(data.window.height * 0.507) # quanto maior, mais pra baixo
+  x = int(data.window.width * 0.46) # quanto maior, mais pra direita
 
   # [altura, largura]
   tableBetImage = img[y:y + 16, x:x + 100]
@@ -162,66 +138,77 @@ def get_table_bet(img):
     int(roundBetValue)
   except:
     # cannot read table bet value
-    stats.roundBetValue = None
     return None
   else:
-    stats.roundBetValue = int(roundBetValue)
     return int(roundBetValue)
 
 def get_card(img, var, shown=False):
   card_suit = get_card_suit(img, shown)
 
   if card_suit:
-    card_value = detect_caractere(improve_card_image(img, card_suit, shown), shown, var)
+    card_value = detect_caractere(improve_card_image(img, card_suit, shown), False, var)
+    if shown:
+      print('card value: ', card_value)
     card_value = validate_card_value(card_value)
+
 
     if card_value: # check if has a card
       var.value = card_value
       var.suit = card_suit
     else:
-      return card()
+      # print('card value invalid: ', card_value)
+      return False
   else:
-    return card()
+    # print('card suit invalid: ', card_value)
+    return False
   
   return 1
 
-def get_table_cards(img, shown=False):
-  global window
-  global stats
-  y = int(window.height * 0.355) # quanto maior, mais pra baixo
-  x = int(window.width * 0.336) # quanto maior, mais pra direita
+def get_table_cards(img, data, try_load_flop=False, try_load_turn=False, try_load_river=False, shown=False):
+  y = int(data.window.height * 0.355) # quanto maior, mais pra baixo
+  x = int(data.window.width * 0.336) # quanto maior, mais pra direita
 
   cards_image = img[y:y + int(y*0.345), x:x + int(x*0.986), :] #[altura, largura]
   h, w = cards_image.shape[:2]
   # space between cards
   space = int(w*0.015)
   space2 = int(w*0.01) 
-  cards = [card(), card(), card(), card(), card()]
+  cards = [card(), card(), card()]
 
   if shown:
     cv.imshow('flop', cards_image)
   
-  card_image = cards_image[:int(h/2), :int(w/5/2 + space), :]
-  if not get_card(card_image, cards[0], False):
-    cards[0] = card()
-  
-  card_image = cards_image[:int(h/2), int(w/5 + space2):int(w/5*1.5 + space), :]
-  if not get_card(card_image, cards[1], False):
-    cards[1] = card()
-  
-  card_image = cards_image[:int(h/2), int(w/5*2 + space2):int(w/5*2.5 + space), :]
-  if not get_card(card_image, cards[2], False):
-    cards[2] = card()
+  if try_load_flop:
+    card_image = cards_image[:int(h/2), :int(w/5/2 + space), :]
+    if not get_card(card_image, cards[0], False):
+      # cards[0] = card()
+      return cards
+    
+    card_image = cards_image[:int(h/2), int(w/5 + space2):int(w/5*1.5 + space), :]
+    if not get_card(card_image, cards[1], False):
+      # cards[1] = card()
+      return cards
+    
+    card_image = cards_image[:int(h/2), int(w/5*2 + space2):int(w/5*2.5 + space), :]
+    if not get_card(card_image, cards[2], False):
+      # cards[2] = card()
+      return cards
 
-  card_image = cards_image[:int(h/2), int(w/5*3 + space2):int(w/5*3.5 + space), :]
-  if not get_card(card_image, cards[3], False):
-    cards[3] = card()
+    return cards
 
-  card_image = cards_image[:int(h/2), int(w/5*4 + space2):int(w/5*4.5 + space), :]
-  if not get_card(card_image, cards[4], False):
-    cards[4] = card()
+  if try_load_turn:
+    card_image = cards_image[:int(h/2), int(w/5*3 + space2):int(w/5*3.5 + space), :]
+    turn = card()
+    get_card(card_image, turn, False)
 
-  return cards
+    return turn
+
+  if try_load_river:
+    card_image = cards_image[:int(h/2), int(w/5*4 + space2):int(w/5*4.5 + space), :]
+    river = card()
+    get_card(card_image, river, False)
+
+    return river
 
 def get_pixel(img, shown=False):
   # img format BGR
@@ -231,7 +218,7 @@ def get_pixel(img, shown=False):
   pixel = img[h-1, w-1]
 
   if shown:
-    cv.imshow('detectColor', img)
+    cv.imshow('get_pixel', img)
 
   return pixel
 
@@ -244,10 +231,7 @@ def get_card_suit(img, shown=False):
 
   b, g, r = pixel
 
-  if shown:
-    print('b: ', b, 'g: ', g, 'r: ', r)
-
-  if ((b == g) and (g == r)):
+  if not is_colorful(pixel):
     return colors[3]
 
   greatest_color_idx = np.where(pixel == max(pixel))
@@ -258,141 +242,135 @@ def get_card_suit(img, shown=False):
     print('is Unknown!')
     return -1
 
-def get_table_stats(img):
-  pot = get_pot(img)
-  tableBet = get_table_bet(img)
-  sb, bb = get_blinds(img)
-
-  if hasAnte:
-    ante = get_ante(img)
-  else:
-    ante = None
-
-def get_button_pos(img):
-  global window
-  w = window.width
-  h = window.height
+def get_button_pos(img, data):
+  w = data.window.width
+  h = data.window.height
 
   y = int(h * 0.5) # quanto maior, mais pra baixo
   x = int(w * 0.24) # quanto maior, mais pra direita
-  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+  buttonImg = img[y:y + int(h*0.02), x:x + int(w*0.02)]
 
-  if is_button(buttonImg):
+  if is_button(buttonImg, False, 1):
     return 1
 
-  y = int(h * 0.37) 
+  y = int(h * 0.366) 
   x = int(w * 0.18) 
-  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+  buttonImg = img[y:y + int(h*0.02), x:x + int(w*0.02)]
 
-  if is_button(buttonImg):
+  if is_button(buttonImg, False, 2):
     return 2
 
   y = int(h * 0.28) 
   x = int(w * 0.29) 
-  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+  buttonImg = img[y:y + int(h*0.02), x:x + int(w*0.02)]
 
-  if is_button(buttonImg):
+  if is_button(buttonImg, False, 3):
     return 3
-  
+
   y = int(h * 0.22) 
   x = int(w * 0.4455) 
-  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+  buttonImg = img[y:y + int(h*0.02), x:x + int(w*0.02)]
 
-  if is_button(buttonImg):
+  if is_button(buttonImg, False, 4):
     return 4
-  
+
   y = int(h * 0.245) 
   x = int(w * 0.64) 
-  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+  buttonImg = img[y:y + int(h*0.02), x:x + int(w*0.02)]
 
-  if is_button(buttonImg):
+  if is_button(buttonImg, False, 5):
     return 5
 
   y = int(h * 0.315) 
   x = int(w * 0.743) 
-  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+  buttonImg = img[y:y + int(h*0.02), x:x + int(w*0.02)]
 
-  if is_button(buttonImg):
+  if is_button(buttonImg, False, 6):
     return 6
-  
+
   y = int(h * 0.5) 
   x = int(w * 0.774) 
-  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+  buttonImg = img[y:y + int(h*0.02), x:x + int(w*0.02)]
 
-  if is_button(buttonImg):
+  if is_button(buttonImg, False, 7):
     return 7
   
   y = int(h * 0.57) 
   x = int(w * 0.66) 
-  buttonImg = img[y:y + int(h*0.05), x:x + int(w*0.05)]
+  buttonImg = img[y:y + int(h*0.02), x:x + int(w*0.02)]
 
-  if is_button(buttonImg):
+  if is_button(buttonImg, False, 8):
     return 8
 
-  return None
+  return 0
 
-def get_opponents(img):
-  global window
-  w = window.width
-  h = window.height
+def get_opponents(img, data):
+  w = data.window.width
+  h = data.window.height
   qntd_opponents = 0
+  # print('getting qntd opponents')
 
-  y = int(window.height * 0.615) # quanto maior, mais pra baixo
-  x = int(window.width * 0.12) # quanto maior, mais pra direita
-  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
-  if is_opponent(opContainer, 0):
-    qntd_opponents += 1
-
-  y = int(window.height * 0.418) 
-  x = int(window.width * 0.02) 
-  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
-  if is_opponent(opContainer, 1):
+  y = int(h * 0.58) # quanto maior, mais pra baixo
+  x = int(w * 0.17) # quanto maior, mais pra direita
+  opContainer = img[y:y + int(h*0.02), x:x + int(w*0.02)]
+  if is_opponent(opContainer, 1, False):
+    data.opponents[0] = True
     qntd_opponents += 1
 
-  y = int(window.height * 0.23) 
-  x = int(window.width * 0.06) 
-  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
-  if is_opponent(opContainer, 2):
+  y = int(h * 0.39) 
+  x = int(w * 0.07) 
+  opContainer = img[y:y + int(h*0.02), x:x + int(w*0.02)]
+  if is_opponent(opContainer, 2, False):
+    data.opponents[1] = True
     qntd_opponents += 1
 
-  y = int(window.height * 0.14) 
-  x = int(window.width * 0.246) 
-  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
-  if is_opponent(opContainer, 3):
+  y = int(h * 0.2) 
+  x = int(w * 0.1) 
+  opContainer = img[y:y + int(h*0.02), x:x + int(w*0.02)]
+  if is_opponent(opContainer, 3, False):
+    data.opponents[2] = True
     qntd_opponents += 1
 
-  y = int(window.height * 0.14) 
-  x = int(window.width * 0.633) 
-  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
-  if is_opponent(opContainer, 4):
+  y = int(h * 0.11) 
+  x = int(w * 0.28) 
+  opContainer = img[y:y + int(h*0.02), x:x + int(w*0.02)]
+  if is_opponent(opContainer, 4, False):
+    data.opponents[3] = True
     qntd_opponents += 1
 
-  y = int(window.height * 0.23) 
-  x = int(window.width * 0.815) 
-  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
-  if is_opponent(opContainer, 5):
+  y = int(h * 0.11) 
+  x = int(w * 0.63) 
+  opContainer = img[y:y + int(h*0.02), x:x + int(w*0.02)]
+  if is_opponent(opContainer, 5, False):
+    data.opponents[4] = True
     qntd_opponents += 1
-  
-  y = int(window.height * 0.418) 
-  x = int(window.width * 0.855) 
-  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
-  if is_opponent(opContainer, 6):
+
+  y = int(h * 0.2) 
+  x = int(w * 0.81) 
+  opContainer = img[y:y + int(h*0.02), x:x + int(w*0.02)]
+  if is_opponent(opContainer, 6, False):
+    data.opponents[5] = True
     qntd_opponents += 1
-  
-  y = int(window.height * 0.615) 
-  x = int(window.width * 0.76) 
-  opContainer = img[y:y + int(h*0.078), x:x + int(w*0.125)]
-  if is_opponent(opContainer, 7):
+
+  y = int(h * 0.39) 
+  x = int(w * 0.85) 
+  opContainer = img[y:y + int(h*0.02), x:x + int(w*0.02)]
+  if is_opponent(opContainer, 7, False):
+    data.opponents[6] = True
+    qntd_opponents += 1
+
+  y = int(h * 0.58) 
+  x = int(w * 0.76) 
+  opContainer = img[y:y + int(h*0.02), x:x + int(w*0.02)]
+  if is_opponent(opContainer, 8, False):
+    data.opponents[7] = True
     qntd_opponents += 1
 
   return qntd_opponents
 
-def get_ante(img):
-  global window
-  global stats
-
-  w = window.width
-  h = window.height
+def get_ante(img, data):
+  w = data.window.width
+  h = data.window.height
   y = int(h * 0.12) 
   x = int(w * 0.97) 
   anteImg = img[y:y + int(h*0.038), x:w]
@@ -402,78 +380,116 @@ def get_ante(img):
     int(ante)
   except:
     # cannot read table bet value
-    stats.ante = None
     return None
   else:
-    stats.ante = int(ante)
     return int(ante)
 
-def get_blinds(img):
-  global window
-  global stats
-
-  w = window.width
-  h = window.height
+def get_blinds(img, hasAnte, shown, data):
+  w = data.window.width
+  h = data.window.height
 
   if not hasAnte:
     y = int(h * 0.12) 
-    x = int(w * 0.953) 
+    x = int(w * 0.92) 
     blindsImg = img[y:y + int(h*0.038), x:w]
   else:
     y = int(h * 0.12) 
-    x = int(w * 0.9) 
+    x = int(w * 0.89) 
     blindsImg = img[y:y + int(h*0.038), x:x + int(w*0.07)]
-
+  if shown:
+    cv.imshow('blinds', blindsImg)
   try: 
-    blinds = detect_number(blindsImg)
+    blinds = detect_number(blindsImg, False)
     # detect_number(16/32) gives -> 16132 then remove '1' -> 1632
     small_blind = blinds[:floor(len(blinds)/2)]
     int(small_blind)
   except:
     # cannot read table bet value
-    stats.sb = None
-    stats.bb = None
     return None, None
   else:
-    stats.sb = int(small_blind)
-    stats.bb = int(small_blind)*2
     return int(small_blind), int(small_blind)*2
 
-def is_button(img):
-  img = cv.Canny(img, 50, 50)
-  # pega as formas na imagem
-  countours, hierarchy = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
-  if not countours:
+def get_state(img, data, shown=False):
+  # 0 cant play yet
+  # 1 check or raise
+  # 2 fold or call or raise
+  # 3 fold or call
+  w = data.window.width
+  h = data.window.height
+
+  y = int(h * 0.9) # quanto maior, mais pra baixo
+  x = int(w * 0.5) # quanto maior, mais pra direita
+  buttons = img[y:h - int(h*0.02), x:w]
+  wid = buttons.shape[1]
+  # check if can fold
+  if debug:
+    pixel = buttons[20, 20]
+  else:
+    pixel = buttons[20, 20][:-1]
+  if is_colorful(pixel):
+    # it can fold
+    btn2 = buttons[:, int(wid/3):int(wid/3*2)]
+    if debug:
+      pixel = btn2[20, 20]
+    else:
+      pixel = btn2[20, 20][:-1]
+    if is_colorful(pixel):
+      # it can raises too -> 2
+      print('can fold or call or raise')
+      return 2
+    else:
+      # cant call, raise or has to go all in -> 3
+      print('can fold or go all in')
+      return 3
+  else:
+    # check if can check
+    btn2 = buttons[:, int(wid/3):int(wid/3*2)]
+
+    if debug:
+      pixel = btn2[20, 20]
+    else:
+      pixel = btn2[20, 20][:-1]
+
+    if is_colorful(pixel):
+      # it can check, wich means that it can raises too -> 1
+      print('can check or bet')
+      return 1
+    else:
+      return 0
+  if shown:
+    cv.imshow('state', buttons)
+
+def is_button(img, shown=False, idx=None):
+  if debug:
+    pixel = get_pixel(img, shown=shown)
+  else:
+    pixel = get_pixel(img, shown=shown)[:-1]
+
+  if shown:
+    print(pixel, 'idx: ', idx)
+
+  if is_colorful(pixel, False):
+    return True
+  else:
     return False
 
-  for cnt in countours:
-    # area da forma
-    area = cv.contourArea(cnt)
+def is_opponent(img, idx, shown=False):
+  result = False
+  if debug:
+    pixel = get_pixel(img)
+  else:
+    pixel = get_pixel(img)[:-1]
 
-    if area > 400:
-      # perimetro da forma
-      perimeter = cv.arcLength(cnt, True)
-      approx = cv.approxPolyDP(cnt, 0.02*perimeter, True)
-      # quantidade de pontas da forma; 3 == triangulo, 4 == retangulo/quadrado, etc...
-      objCorners = len(approx)
-      if objCorners > 4: 
-        return True 
-      else: 
-        return False
+  if is_colorful(pixel, False):
+    result = True
+  else:
+    result = False
 
-def is_opponent(img, idx):
-  h = img.shape[0]
-  name = img[0: int(h/2), :]
-  name = detect_inline_text(name)
-
-  if(len(name) > 0):
-    chips = img[int(h/2):, :]
-    chips = detect_number(chips)
-    opponents[idx].name = name
-    opponents[idx].chips = chips
-    return True
+  if shown:
+    cv.imshow('Opponent ' + str(idx), img)
+    print(b, g, r, 'idx: ', idx, result)
   
-  return False
+  return result
 
 def improve_image(image, invert=True, blur=False):
   # source: https://stackoverflow.com/questions/54497882/how-improve-image-quality-to-extract-text-from-image-using-tesseract
@@ -500,10 +516,22 @@ def improve_image(image, invert=True, blur=False):
   
   return result
 
+def is_colorful(pixel, shown=False):
+  if debug:
+    b, g, r = pixel
+  else:
+    b, g, r = pixel
+
+  if not(b == g and g == r):
+    # is colorful
+    return True
+  else:
+    return False
+
 def improve_card_image(img, suit, shown=False):
   # convert to grayscale
-
   result = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
   if shown:
     print('suit: ', suit)
 
@@ -543,8 +571,7 @@ def improve_card_image(img, suit, shown=False):
     return -1
 
 def status_screen(fps):
-  global stats
-
+  # not working, class stats removed
   screen = np.zeros((512, 512, 3), np.uint8)
   stats_list = {'    STATUS EM TEMPO REAL    ': str(fps), '':'', 
   'potValue: ': str(stats.potValue),
@@ -567,89 +594,144 @@ def status_screen(fps):
   cv.namedWindow('Status', cv.WINDOW_NORMAL)
   cv.imshow('Status', screen)
 
-def get_one_image(images): # junta as img, ta dando erro pq potImage so é 2D
-  #img_list = []
-  img_list = images
-  padding = 200
-  # for img in img_list:
-    #img_list.append(cv.imread(img, 1))
-  max_width = []
-  max_height = 0
-  for img in img_list:
-    max_width.append(img.shape[0])
-    max_height += img.shape[1]
-  w = np.max(max_width)
-  h = max_height + padding
-
-  # create a new array with a size large enough to contain all the images
-  final_image = np.zeros((h, w), dtype=np.uint8)
-
-  current_y = 0  # keep track of where your current image was last placed in the y coordinate
-  for image in img_list:
-    # add an image to the final array and increment the y coordinate
-    final_image[current_y:image.shape[0] + current_y, : image.shape[1]] = image
-    current_y += image.shape[0]
-
-  return final_image  
 # https://python-mss.readthedocs.io/examples.html
-def capture_screen():
+def capture_screen(data):
   with mss.mss() as sct:
+    last_tm = time.time()
     if not debug:
-      monitor = get_monitor()
+      monitor = get_monitor(data)
       img = np.array(sct.grab(monitor))
+      # print('screens p/s: {: 2.f}'.format(1/(time.time() - last_tm)))
     else:
-      global window
-      img = cv.imread('./images/error7.png')
-      window.left = 0
-      window.top = 0
-      window.right = 955
-      window.bottom = 689
-      window.width = 955
-      window.height = 689
+      img = cv.imread('./images/error.png')
+      data.window.left = 0
+      data.window.top = 0
+      data.window.right = 955
+      data.window.bottom = 689
+      data.window.width = 955
+      data.window.height = 689
   
   return img
 
-def get_data(data):
+def get_cards(data, img):
+  # se nenhuma carta for valida no array de cartas do player
+  if any(not card.isLoaded() for card in data.playerCards):
+    # did not recieved cards
+    data.playerCards = get_player_cards(img, data, shown=False)
+    
+    if (data.playerCards[0].isLoaded()):
+      print('Player cards loaded')
+
+  if data.round < 1 and any(not card.isLoaded() for card in data.flop):
+    print('loading flop')
+    data.flop = get_table_cards(img, data, try_load_flop=True)
+    # se todas carta forem validas no array do flop
+    if all(card.isLoaded() for card in data.flop):
+      # if flop was loaded with sucess
+      print('flop loaded')
+
+      if data.round < 1:
+        data.hasPlayed = False
+        data.round = 1
+
+  if data.round < 2 and not data.turn.isLoaded() and (all(card.isLoaded() for card in data.flop)):
+    data.turn = get_table_cards(img, data, try_load_turn=True)
+
+    if data.turn.isLoaded():
+      print('turn loaded')
+
+      if data.round < 2:
+        data.hasPlayed = False
+        data.round = 2
+
+  if data.round < 3 and data.turn.isLoaded() and not data.river.isLoaded():
+    data.river = get_table_cards(img, data, try_load_river=True)
+
+    if data.river.isLoaded():
+      print('river loaded')
+      if data.round < 3:
+        data.hasPlayed = False
+        data.round = 3
+
+def reset_varaibles(data):
+  print('reseting')
+  data.round = 0
+  data.flop = [card(), card(), card()]
+  data.turn = card()
+  data.river = card()
+  data.playerCards = [card(), card()]
+  data.playerChips = None
+  data.sb, data.bb = [None, None]
+  data.ante = None
+  data.buttonPos = None
+  data.qntdOpponents = None
+  data.opponents = [None, None, None, None, None, None, None, None]
+  data.hasPlayed = False
+  data.stillPlaying = True
+  data.state = 0
+
+def retrieve_data(data):
+  # data.round
+  # -1 = break or network error
+  # 0 = initial bets
+  # 1 = flop
+  # 2 = turn
+  # 3 = river
   last_time = time.time()
-  img = capture_screen()
+  img = capture_screen(data)
   improvedImage = improve_image(img)
+  data.potSize = get_pot(improvedImage, data, shown=False)
+
+  if not data.potSize:
+    # if doesnt have pot, probabyly is animating from an ending round or in an interval
+    data.fps = "{: .2f}".format(1 / (time.time() - last_time))
+    return -1
+
+  if not data.lastPotSize:
+    # initialize lastPotSize
+    data.lastPotSize = data.potSize + 1
+
+  if data.potSize < data.lastPotSize:
+    # table reseted -> reset variables
+    print('potSize: {} <? lastPotSize: {}'.format(data.potSize, data.lastPotSize))
+    reset_varaibles(data)
+  else:
+    # table still going
+    pass
+
+  if not data.stillPlaying:
+    data.fps = "{: .2f}".format(1 / (time.time() - last_time))
+    return -1
+
+  data.lastPotSize = data.potSize
+  data.roundBetSize = get_table_bet(improvedImage, data)
+  data.state = get_state(img, data, shown=False)
+  get_cards(data, img)
   
-  data.potSize = get_pot(improvedImage)
-  data.roundBetSize = get_table_bet(improvedImage)
-  data.ante = get_ante(improvedImage)
-  cards = get_table_cards(img)
-  data.flop = cards[:3]
-  data.turn = cards[3]
-  data.river = cards[4]
-  # data.playerChips = get_player_chips(improvedImage)
-  # data.playerCards = get_player_cards(improvedImage)
-  data.buttonPos = get_button_pos(improvedImage)
-  data.sb, data.bb = get_blinds(improvedImage)
-  data.opponents = get_opponents(improvedImage)
+  if not data.playerChips:
+    data.playerChips = get_player_chips(improvedImage, data, shown=False)
+  
+  if not data.sb:
+    data.sb, data.bb = get_blinds(improvedImage, data.hasAnte, True, data)
+
+  if not data.ante and data.hasAnte:
+    data.ante = get_ante(improvedImage, data)
+  
+  if not data.buttonPos:
+    data.buttonPos = get_button_pos(img, data)
+
+  data.qntdOpponents = get_opponents(img, data)
   data.fps = "{: .2f}".format(1 / (time.time() - last_time))
 
 if __name__ == "__main__":
-  cont = 5
   print('iniciando read_info')
   while "Screen capturing":
     last_time = time.time()
-    img = capture_screen()
-
+    img = capture_screen(data)
     improvedImage = improve_image(img)
 
-    get_table_stats(improvedImage)
-    # get_table_cards(img, False)
-    """ if cont == 5:
-      getOpponents(improvedImage)
-      cont = 0
-    stats.buttonPos = getButtonPos(improvedImage)
-    player.getPlayerStats(improvedImage, player)
-    player.getPlayerCards(improveImage(img, False), player) """
-    # status_screen("FPS: {: .2f}".format(1 / (time.time() - last_time)))
+    get_state(img, True)
 
-    # cv.namedWindow("Screen", cv.WINDOW_NORMAL)
-    # cv.imshow("Screen", img)
-    cont += 1
     # Press "q" to quit
     if cv.waitKey(25) & 0xFF == ord("q"):
       cv.destroyAllWindows()
