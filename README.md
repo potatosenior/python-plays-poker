@@ -1,7 +1,6 @@
 # Python joga poker
 
 ## O que é
-
 É um programa em python que usa visão computacional para ler dados de uma mesa de poker online e tomar decisões sobre a partida.
 
 ## Estado atual
