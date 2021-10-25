@@ -30,8 +30,8 @@ def read_info(data):
     print('state: {}, round: {}, cards: {} {}'.format(data.state, data.round, data.playerCards[0].value, data.playerCards[1].value))
     should, hand_power = should_play_initial_hand(data.playerCards, data.buttonPos, data)
     data.hasPlayed = True
-    return
-    
+
+    # makes the play
     if data.round == 0:
       if should:
         if hand_power == 1:
@@ -53,10 +53,10 @@ def read_info(data):
           action = 0
           data.stillPlaying = False
 
-      log = np.asarray([[data.playerCards[0].value + data.playerCards[0].suit[0], data.playerCards[1].value + data.playerCards[1].suit[0], data.state, action]], dtype=object)
+      # log = np.asarray([[data.playerCards[0].value + data.playerCards[0].suit[0], data.playerCards[1].value + data.playerCards[1].suit[0], data.state, action]], dtype=object)
 
-      with open('./logs/flop_log.csv', 'a+') as file:
-        np.savetxt(file, log, fmt='%s')
+      # with open('./logs/flop_log.csv', 'a+') as file:
+        # np.savetxt(file, log, fmt='%s')
 
     if data.round >= 1:
       if hand_power:

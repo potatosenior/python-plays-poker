@@ -1,5 +1,5 @@
 salvar infos dos players da mesa
 blefar dependendo da diferença entre a quantidade de ficha
 verificar quando começar intervalo
-verificar quando o flop aparecer
+verificar quando o flop aparecer--------
 definir o valor do tableBetSize do round de acordo com o Pot size da table

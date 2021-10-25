@@ -57,6 +57,7 @@ def get_hand_power(card1, card2, same_suit):
 
 def sort_cards(card1, card2):
   # sort the cards in A -> 2 to fit in the arrays values
+  # ordena as cartas em ordem crescente, ex: card1 = 7 e card2 = A, card1 recebe A, e card2 recebe 7 para encaixar nos arrays acima
   if card1.value == card2.value:
     return card1, card2
   else:

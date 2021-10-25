@@ -2,7 +2,7 @@ import time
 import cv2 as cv
 import mss
 import numpy as np
-import win32gui
+import win32gui # pip install pywin32
 import pytesseract
 from stackImages import stackImages
 from math import floor
@@ -35,7 +35,7 @@ def get_table_window(hwnd, monitor):
 
 def get_monitor(data):
   # https://stackoverflow.com/questions/7142342/get-window-position-size-with-python
-  monitor = {"top": 0, "left": 0, "width": 0, "height": 0}
+  monitor = {"top": 0, "left": 0, "right": 0,"width": 0, "height": 0, "bottom": 0,}
   win32gui.EnumWindows(get_table_window, monitor)
   data.window.left = monitor["left"]
   data.window.top = monitor["top"]
@@ -420,6 +420,10 @@ def get_state(img, data, shown=False):
   y = int(h * 0.9) # quanto maior, mais pra baixo
   x = int(w * 0.5) # quanto maior, mais pra direita
   buttons = img[y:h - int(h*0.02), x:w]
+  
+  if shown:
+    cv.imshow("buttons", buttons)
+
   wid = buttons.shape[1]
   # check if can fold
   if debug:
@@ -712,7 +716,7 @@ def retrieve_data(data):
     data.playerChips = get_player_chips(improvedImage, data, shown=False)
   
   if not data.sb:
-    data.sb, data.bb = get_blinds(improvedImage, data.hasAnte, True, data)
+    data.sb, data.bb = get_blinds(improvedImage, data.hasAnte, False, data)
 
   if not data.ante and data.hasAnte:
     data.ante = get_ante(improvedImage, data)

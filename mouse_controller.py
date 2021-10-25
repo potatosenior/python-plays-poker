@@ -6,6 +6,7 @@ def click(data, btn):
   # 1 fold
   # 2 call/check
   # 3 call/raise
+  print("click!", btn)
   l, t, w, h = data.window.left, data.window.top, data.window.width, data.window.height
 
   if btn == 1:
